@@ -170,17 +170,17 @@ const MAX_SCRIPT_ELEMENT_SIZE = 520
 
 async function mintBellmap() {
 	const argAddress = process.argv[3]
-	const start = parseInt(process.argv[4], 10);
-	const end = parseInt(process.argv[5], 10);
+	const start = parseInt(process.argv[4], 10)
+	const end = parseInt(process.argv[5], 10)
 	let address = new Address(argAddress)
 
 	for (let i = start; i <= end; i++) {
-		const data = Buffer.from(`${i}.bellmap`, 'utf8');
-		const contentType = 'text/plain';
+		const data = Buffer.from(`${i}.bellmap`, 'utf8')
+		const contentType = 'text/plain'
 
 		let wallet = JSON.parse(fs.readFileSync(WALLET_PATH))
 		let txs = inscribe(wallet, address, contentType, data)
-		console.log(`${i}.bellmap`);
+		console.log(`${i}.bellmap`)
 		await broadcastAll(txs, false)
 	}
 }
@@ -434,7 +434,11 @@ async function broadcast(tx, retry) {
 			await axios.post(process.env.NODE_RPC_URL, body, options)
 			break
 		} catch (e) {
-			if (!retry) throw JSON.stringify(e.response.data)
+			if (!retry) {
+				let m = e && e.response && e.response.data
+				throw m ? JSON.stringify(m) : e
+			}
+
 			let msg =
 				e.response && e.response.data && e.response.data.error && e.response.data.error.message
 			if (msg && msg.includes('too-long-mempool-chain')) {
