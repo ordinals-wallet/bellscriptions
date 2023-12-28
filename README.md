@@ -1,6 +1,6 @@
-# Doginals
+# Bellscriptions
 
-A minter and protocol for inscriptions on Dogecoin. 
+A minter and protocol for inscriptions on Bells. 
 
 ## Setup
 
@@ -27,7 +27,7 @@ Generate a new `.wallet.json` file:
 node . wallet new
 ```
 
-Then send DOGE to the address displayed. Once sent, sync your wallet:
+Then send BELLS to the address displayed. Once sent, sync your wallet:
 
 ```
 node . wallet sync
@@ -53,10 +53,10 @@ From file:
 node . mint <address> <path>
 ```
 
-From data:
+Repeating:
 
 ```
-node . mint <address> <content type> <hex data>
+node . mint <address> <path> <repeat>
 ```
 
 Examples:
@@ -66,10 +66,8 @@ node . mint DSV12KPb8m5b6YtfmqY89K6YqvdVwMYDPn dog.jpeg
 ```
 
 ```
-node . mint DSV12KPb8m5b6YtfmqY89K6YqvdVwMYDPn "text/plain;charset=utf8" 576f6f6621 
+node . mint DSV12KPb8m5b6YtfmqY89K6YqvdVwMYDPn mint.json 100
 ```
-
-**Note**: Please use a fresh wallet to mint to with nothing else in it until proper wallet for doginals support comes. You can get a paper wallet [here](https://www.fujicoin.org/wallet_generator?currency=Dogecoin).
 
 ## Viewing
 
@@ -87,7 +85,7 @@ http://localhost:3000/tx/15f3b73df7e5c072becb1d84191843ba080734805addfccb6509297
 
 ## Protocol
 
-The doginals protocol allows any size data to be inscribed onto subwoofers.
+The bellscriptions protocol allows any size data to be inscribed onto subwoofers.
 
 An inscription is defined as a series of push datas:
 
@@ -99,7 +97,7 @@ OP_0
 "Woof!"
 ```
 
-For doginals, we introduce a couple extensions. First, content may spread across multiple parts:
+For bellscriptions, we introduce a couple extensions. First, content may spread across multiple parts:
 
 ```
 "ord"

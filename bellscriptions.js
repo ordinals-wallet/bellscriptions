@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const dogecore = require('bitcore-lib-doge')
+const dogecore = require('./bitcore-lib-bells')
 const axios = require('axios')
 const fs = require('fs')
 const dotenv = require('dotenv')
@@ -18,7 +18,7 @@ if (process.env.TESTNET == 'true') {
 if (process.env.FEE_PER_KB) {
     Transaction.FEE_PER_KB = parseInt(process.env.FEE_PER_KB)
 } else {
-    Transaction.FEE_PER_KB = 100000000
+    Transaction.FEE_PER_KB = 100000
 }
 
 const WALLET_PATH = process.env.WALLET || '.wallet.json'
@@ -31,11 +31,19 @@ async function main() {
         console.log('found pending-txs.json. rebroadcasting...')
         const txs = JSON.parse(fs.readFileSync('pending-txs.json'))
         await broadcastAll(txs.map(tx => new Transaction(tx)), false)
-        return 
+        return
     }
 
     if (cmd == 'mint') {
-        await mint()
+        const count = parseInt(process.argv[5], 10)
+
+        if (!isNaN(count)) {
+            for (let i = 0; i < count; i++) {
+                await mint()
+            }
+        } else {
+            await mint()
+        }
     } else if (cmd == 'wallet') {
         await wallet()
     } else if (cmd == 'server') {
@@ -84,17 +92,11 @@ async function walletSync() {
 
     let wallet = JSON.parse(fs.readFileSync(WALLET_PATH))
 
-    console.log('syncing utxos with dogechain.info api')
+    console.log('syncing utxos with bells.quark.blue api')
 
-    let response = await axios.get(`https://dogechain.info/api/v1/address/unspent/${wallet.address}`)
-    wallet.utxos = response.data.unspent_outputs.map(output => {
-        return {
-            txid: output.tx_hash,
-            vout: output.tx_output_n,
-            script: output.script,
-            satoshis: output.value
-        }
-    })
+    let response = await axios.get(`https://bells.quark.blue/api/address/${wallet.address}/utxo`)
+    wallet.utxos = response.data.map(e => ({ txid: e.txid, vout: e.vout, satoshis: e.value, script: Script(new Address(wallet.address)).toHex()  }));
+    
 
     fs.writeFileSync(WALLET_PATH, JSON.stringify(wallet, 0, 2))
 
@@ -168,10 +170,8 @@ const MAX_SCRIPT_ELEMENT_SIZE = 520
 async function mint() {
     const argAddress = process.argv[3]
     const argContentTypeOrFilename = process.argv[4]
-    const argHexData = process.argv[5]
 
-
-    let address = new Address(argAddress)
+    let address = new Address(argAddress, )
     let contentType
     let data
 
@@ -179,9 +179,7 @@ async function mint() {
         contentType = mime.contentType(mime.lookup(argContentTypeOrFilename))
         data = fs.readFileSync(argContentTypeOrFilename)
     } else {
-        contentType = argContentTypeOrFilename
-        if (!/^[a-fA-F0-9]*$/.test(argHexData)) throw new Error('data must be hex')
-        data = Buffer.from(argHexData, 'hex')
+        process.exit()
     }
 
     if (data.length == 0) {
@@ -205,20 +203,20 @@ async function broadcastAll(txs, retry) {
         console.log(`broadcasting tx ${i + 1} of ${txs.length}`)
 
         try {
-            throw new Error('hello')
             await broadcast(txs[i], retry)
         } catch (e) {
-            console.log('broadcast failed', e)
-            console.log('saving pending txs to pending-txs.json')
-            console.log('to reattempt broadcast, re-run the command')
+            console.log('❌ broadcast failed', e)
             fs.writeFileSync('pending-txs.json', JSON.stringify(txs.slice(i).map(tx => tx.toString())))
             process.exit(1)
         }
     }
 
-    fs.deleteFileSync('pending-txs.json')
+    try {
+        fs.rmSync('pending-txs.json')
+    } catch (e) {}
 
-    console.log('inscription txid:', txs[1].hash)
+    console.log('✅ inscription txid:', txs[1].hash)
+    return true;
 }
 
 
@@ -243,10 +241,8 @@ function opcodeToChunk(op) {
     return { opcodenum: op }
 }
 
-
 const MAX_CHUNK_LEN = 240
 const MAX_PAYLOAD_LEN = 1500
-
 
 function inscribe(wallet, address, contentType, data) {
     let txs = []
@@ -263,7 +259,6 @@ function inscribe(wallet, address, contentType, data) {
         parts.push(part)
     }
 
-
     let inscription = new Script()
     inscription.chunks.push(bufferToChunk('ord'))
     inscription.chunks.push(numberToChunk(parts.length))
@@ -272,8 +267,6 @@ function inscribe(wallet, address, contentType, data) {
         inscription.chunks.push(numberToChunk(parts.length - n - 1))
         inscription.chunks.push(bufferToChunk(part))
     })
-
-
 
     let p2shInput
     let lastLock
@@ -308,6 +301,7 @@ function inscribe(wallet, address, contentType, data) {
 
 
         let lockhash = Hash.ripemd160(Hash.sha256(lock.toBuffer()))
+
 
 
         let p2sh = new Script()
@@ -376,9 +370,9 @@ function inscribe(wallet, address, contentType, data) {
     updateWallet(wallet, tx)
     txs.push(tx)
 
-
     return txs
 }
+
 
 
 function fund(wallet, tx) {
@@ -401,7 +395,6 @@ function fund(wallet, tx) {
     }
 }
 
-
 function updateWallet(wallet, tx) {
     wallet.utxos = wallet.utxos.filter(utxo => {
         for (const input of tx.inputs) {
@@ -418,7 +411,7 @@ function updateWallet(wallet, tx) {
                 wallet.utxos.push({
                     txid: tx.hash,
                     vout,
-                    script: output.script.toHex(),
+                    script: Script(new Address(wallet.address)).toHex(),
                     satoshis: output.satoshis
                 })
             }
@@ -446,7 +439,7 @@ async function broadcast(tx, retry) {
             await axios.post(process.env.NODE_RPC_URL, body, options)
             break
         } catch (e) {
-            if (!retry) throw e
+            if (!retry) throw JSON.stringify(e.response.data)
             let msg = e.response && e.response.data && e.response.data.error && e.response.data.error.message
             if (msg && msg.includes('too-long-mempool-chain')) {
                 console.warn('retrying, too-long-mempool-chain')
