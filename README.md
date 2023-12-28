@@ -62,11 +62,25 @@ node . mint <address> <path> <repeat>
 Examples:
 
 ```
-node . mint DSV12KPb8m5b6YtfmqY89K6YqvdVwMYDPn dog.jpeg
+node . mint BQQcsCCBiQn1aJsrrNzTg4Lm7MMd1PzZHq dog.jpeg
 ```
 
 ```
-node . mint DSV12KPb8m5b6YtfmqY89K6YqvdVwMYDPn mint.json 100
+node . mint BQQcsCCBiQn1aJsrrNzTg4Lm7MMd1PzZHq mint.json 100
+```
+
+## Bellmap
+
+You may bulk mint bellmap by specifying an address to receive and a start and end bellmap number
+
+```
+node . mint-bellmap <address> <start> <end>
+```
+
+Examples:
+
+```
+node . mint-bellmap BQQcsCCBiQn1aJsrrNzTg4Lm7MMd1PzZHq 0 100
 ```
 
 ## Viewing

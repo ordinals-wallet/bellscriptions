@@ -5,3 +5,4 @@ node_modules
 mints
 pending-*
 yarn.lock
+.pending*
